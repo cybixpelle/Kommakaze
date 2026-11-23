@@ -29,10 +29,13 @@
   .ov{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;
     background:rgba(6,4,26,.72)}
   .ov.on{display:flex}
-  h1{font-size:76px;margin:0;font-style:italic;font-weight:900;letter-spacing:.02em;
+  h1{font-size:64px;margin:0;font-style:italic;font-weight:900;letter-spacing:.02em;
     background:linear-gradient(180deg,#fff 20%,#ffd84a 55%,#ff5fa2);-webkit-background-clip:text;background-clip:text;color:transparent;
     filter:drop-shadow(0 5px 0 rgba(0,0,0,.45))}
-  .tag{font-size:18px;opacity:.85;margin:2px 0 20px}
+  .tag{font-size:17px;opacity:.85;margin:2px 0 14px}
+  #cats{display:flex;gap:10px;margin-bottom:14px}
+  #cats button{font-size:16px;padding:8px 18px;border-radius:999px}
+  #cats button.on{background:#ffd84a;border-color:#ffd84a;color:#14104a}
   #lv{display:flex;gap:12px}
   #lv button{width:168px;padding:12px 6px 10px;display:flex;flex-direction:column;align-items:center;gap:3px}
   #lv .n{font-size:13px;opacity:.7}
@@ -63,7 +66,8 @@
 
   <div id="menu" class="ov on">
     <h1>KOMMAKAZE</h1>
-    <div class="tag">Rulla, hoppa och fyll tårtan – bråk och decimaltal i full fart!</div>
+    <div class="tag">Rulla, hoppa och fyll tårtan – bråk, decimaltal, gånger, plus och minus i full fart!</div>
+    <div id="cats"></div>
     <div id="lv"></div>
     <div class="row"><button id="bcp"></button><button id="bsnd"></button></div>
     <div class="help"><kbd>Mellanslag</kbd> eller klick/tryck = hoppa (håll in för att fortsätta hoppa)<br>
@@ -96,12 +100,36 @@ const T10=[[1,10],[3,10],[7,10],[9,10]], HALF=[[1,2],[1,4],[3,4]], FIFTH=[[1,5],
   HUND=[[1,100],[3,100],[7,100],[9,100],[23,100],[41,100],[1,20],[1,25],[1,50]],
   EIGHT=[[1,8],[3,8],[5,8],[7,8],[3,20],[9,20]];
 const P1=['spike','spike','block','spike2'], P2=['spike','spike2','block','blockSpikes','hops'], P3=[...P2,'stairs','islands'];
+// En uppgift är {k,a,b}: k = f2d/d2f (bråket a/b), mul (a·b), add (a+b) eller sub (a−b)
+const BOTH=['f2d','d2f'];
+const fr=(facts,ks)=>facts.flatMap(f=>ks.map(k=>({k,a:f[0],b:f[1]})));
+const range=(lo,hi)=>Array.from({length:hi-lo+1},(_,i)=>lo+i);
+const grid=(k,as,bs,ok)=>as.flatMap(a=>bs.map(b=>({k,a,b}))).filter(o=>ok(o.a,o.b));
+const tab=ts=>grid('mul',ts,range(2,10),()=>true);
+function pickN(list,n,seed){const r=rng(seed),a=list.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a.slice(0,n)}
+const ADD1=grid('add',range(3,9),range(3,9),(a,b)=>a+b>10),
+  SUB1=grid('sub',range(11,18),range(3,9),(a,b)=>a-b>=2&&a-b<=9),
+  ADD2=pickN(grid('add',range(13,79),range(13,79),(a,b)=>a%10&&b%10&&a+b<=140),70,11),
+  SUB2=pickN(grid('sub',range(31,99),range(13,79),(a,b)=>a%10&&b%10&&a-b>=11&&a%10!==b%10),70,12),
+  DEC=[...pickN(grid('add',range(2,19),range(2,9),(a,b)=>a%10&&(a+b)%10),25,13),
+       ...pickN(grid('sub',range(11,25),range(2,9),(a,b)=>a%10&&(a-b)%10),25,14)].map(o=>({k:o.k,a:o.a/10,b:o.b/10}));
+const CATS=['Bråk & decimaler','Gångertabeller','Plus & minus'];
 const LEVELS=[
-  {name:'Halvor & tiondelar',sub:'Bråk → decimal',speed:7.5,hue:255,dirs:['f2d'],facts:[...HALF,...T10],n:6,per:2,pool:P1},
-  {name:'Tvärtom!',sub:'Decimal → bråk',speed:8,hue:190,dirs:['d2f'],facts:[...HALF,...T10],n:6,per:2,pool:P2},
-  {name:'Femtedelar',sub:'Åt båda hållen',speed:8.5,hue:320,dirs:['f2d','d2f'],facts:[...FIFTH,...HALF,[3,10],[7,10]],n:7,per:3,pool:P3},
-  {name:'Hundradelar',sub:'Små tal, hög fart',speed:9,hue:140,dirs:['f2d','d2f'],facts:[...HUND,[1,4],[3,4]],n:7,per:3,pool:P3},
-  {name:'Mästarbanan',sub:'Allt blandat',speed:10,hue:15,dirs:['f2d','d2f'],facts:[...HALF,...T10,...FIFTH,...HUND,...EIGHT],n:8,per:3,pool:P3},
+  {cat:0,name:'Halvor & tiondelar',sub:'Bråk → decimal',speed:7.5,hue:255,items:fr([...HALF,...T10],['f2d']),n:6,per:2,pool:P1},
+  {cat:0,name:'Tvärtom!',sub:'Decimal → bråk',speed:8,hue:190,items:fr([...HALF,...T10],['d2f']),n:6,per:2,pool:P2},
+  {cat:0,name:'Femtedelar',sub:'Åt båda hållen',speed:8.5,hue:320,items:fr([...FIFTH,...HALF,[3,10],[7,10]],BOTH),n:7,per:3,pool:P3},
+  {cat:0,name:'Hundradelar',sub:'Små tal, hög fart',speed:9,hue:140,items:fr([...HUND,[1,4],[3,4]],BOTH),n:7,per:3,pool:P3},
+  {cat:0,name:'Mästarbanan',sub:'Allt blandat',speed:10,hue:15,items:fr([...HALF,...T10,...FIFTH,...HUND,...EIGHT],BOTH),n:8,per:3,pool:P3},
+  {cat:1,name:'Tabell 2, 5 & 10',sub:'Uppvärmning',speed:7.5,hue:210,items:tab([2,5,10]),n:7,per:2,pool:P1},
+  {cat:1,name:'Tabell 3 & 4',sub:'Nu börjar det',speed:8,hue:280,items:tab([3,4]),n:7,per:2,pool:P2},
+  {cat:1,name:'Tabell 6 & 7',sub:'De kluriga',speed:8.5,hue:95,items:tab([6,7]),n:7,per:3,pool:P3},
+  {cat:1,name:'Tabell 8 & 9',sub:'Nästan i mål',speed:9,hue:345,items:tab([8,9]),n:7,per:3,pool:P3},
+  {cat:1,name:'Alla tabeller',sub:'Blandat i hög fart',speed:10,hue:40,items:tab(range(2,9)),n:8,per:3,pool:P3},
+  {cat:2,name:'Plus till 20',sub:'Över tiotalet',speed:7.5,hue:165,items:ADD1,n:7,per:2,pool:P1},
+  {cat:2,name:'Minus till 20',sub:'Under tiotalet',speed:8,hue:225,items:SUB1,n:7,per:2,pool:P2},
+  {cat:2,name:'Stora plus',sub:'Tvåsiffriga tal',speed:7.5,think:6,hue:300,items:ADD2,n:6,per:2,pool:P2},
+  {cat:2,name:'Stora minus',sub:'Tvåsiffriga tal',speed:7.5,think:6,hue:60,items:SUB2,n:6,per:2,pool:P2},
+  {cat:2,name:'Decimaltal',sub:'Plus & minus med tiondelar',speed:8,think:5,hue:0,items:DEC,n:7,per:3,pool:P3},
 ];
 
 // Hinderbitar. Varje funktion lägger ut hinder från x och returnerar var biten slutar.
@@ -125,7 +153,7 @@ function buildLevel(li){
       last=t;x=CH[t](L,x)+gap;
     }
     x+=4;
-    L.slots.push({ask:Math.max(prevEnd,x-C.speed*3.5),gates:[x,x+gg,x+2*gg]});
+    L.slots.push({ask:Math.max(prevEnd,x-C.speed*(C.think||3.5)),gates:[x,x+gg,x+2*gg]});
     prevEnd=x+2*gg+2;x+=2*gg+10;
   }
   L.finish=x+4;
@@ -133,13 +161,24 @@ function buildLevel(li){
 }
 
 // Bygger en fråga med två felaktiga svar som bygger på vanliga missuppfattningar.
-function makeQuestion(fact,dir,facts,rnd){
-  const [n,d]=fact,v=n/d,s=fmtDec(v);
+function makeQuestion(item,items,rnd){
+  const {k,a,b}=item,dir=k,n=a,d=b;
+  const D=x=>({t:'d',s:fmtDec(x)});
   const key=o=>o.t==='d'?o.s:o.n+'/'+o.d;
-  const same=o=>o.t==='d'?o.s===s:o.n*d===o.d*n;
   const sh=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+  const facts=items.filter(o=>o.k==='f2d'||o.k==='d2f').map(o=>[o.a,o.b]);
+  let v=n/d,s=fmtDec(v);
+  let same=o=>o.t==='d'?o.s===s:o.n*d===o.d*n;
   let mis,oth,right;
-  if(dir==='f2d'){
+  if(k==='mul'||k==='add'||k==='sub'){
+    v=k==='mul'?a*b:k==='add'?a+b:a-b;right=D(v);same=o=>o.s===right.s;
+    let c;
+    if(k==='mul')c=[a*(b+1),a*(b-1),(a+1)*b,(a-1)*b,a+b];                  // granne i tabellen, eller plus i stället för gånger
+    else if(a%1||b%1)c=[v/10,v*10,v+.1,v-.1,v+1,v-1];                       // kommat på fel plats
+    else if(k==='add')c=[v-10,v+10,v-1,v+1,v+2,v-2];                        // glömd minnessiffra
+    else c=[v+10,v-10,v-1,v+1,v+2,Math.abs(Math.floor(a/10)-Math.floor(b/10))*10+Math.abs(a%10-b%10)]; // "störst minus minst"
+    mis=c.filter(x=>x>.0001).map(D);oth=[v+2,v+3,v*2,v+5].map(D);
+  }else if(dir==='f2d'){
     right={t:'d',s};
     mis=[parseFloat('0.'+n+d),parseFloat('0.'+d),parseFloat(n+'.'+d),v*10,v/10]
       .filter(x=>x>0&&Math.abs(x*1000-Math.round(x*1000))<1e-6).map(x=>({t:'d',s:fmtDec(x)}));
@@ -156,10 +195,10 @@ function makeQuestion(fact,dir,facts,rnd){
   }
   const seen=new Set([key(right)]);
   const take=list=>{for(const o of sh(list.slice()))if(!same(o)&&!seen.has(key(o))){seen.add(key(o));return o}};
-  const a=take(mis)||take(oth);
-  const b=(rnd()<.5&&take(mis))||take(oth)||take(mis);
-  const opts=sh([right,a,b]);
-  return {fact,dir,opts,correct:opts.indexOf(right)};
+  const w1=take(mis)||take(oth);
+  const w2=(rnd()<.5&&take(mis))||take(oth)||take(mis);
+  const opts=sh([right,w1,w2]);
+  return {item,opts,correct:opts.indexOf(right),sw:rnd()<.5};
 }
 
 function newRun(li){
@@ -212,14 +251,51 @@ const $=id=>document.getElementById(id);
 const fracH=(n,d)=>`<span class="fr"><i>${n}</i><i>${d}</i></span>`;
 const starH=s=>'★'.repeat(s)+'<span style="opacity:.22;color:#fff">'+'★'.repeat(3-s)+'</span>';
 const optH=o=>o.t==='d'?o.s:fracH(o.n,o.d);
+const isFr=q=>q.item.k==='f2d'||q.item.k==='d2f';
+const mkey=q=>q.item.a+'/'+q.item.b+q.item.k;
+// Räkneuppgiftens delar: [vänster tal, tecken, höger tal, svar]
+function arith(q){
+  const {k,a,b}=q.item,sw=q.sw&&k!=='sub';
+  return [sw?b:a,{mul:'·',add:'+',sub:'−'}[k],sw?a:b,k==='mul'?a*b:k==='add'?a+b:a-b];
+}
+function promptH(q){
+  const {k,a,b}=q.item;
+  if(k==='f2d')return `Skriv ${fracH(a,b)} i <b>decimalform</b>`;
+  if(k==='d2f')return `Skriv ${fmtDec(a/b)} i <b>bråkform</b>`;
+  const [x,op,y]=arith(q);
+  return `${fmtDec(x)} ${op} ${fmtDec(y)} = <b>?</b>`;
+}
 function explain(q){
-  const [n,d]=q.fact,s=fmtDec(n/d),F=fracH(n,d);
-  const places=s.split(',')[1].length,den=10**places,k=Math.round(n/d*den);
-  const unit={10:'tiondel',100:'hundradel',1000:'tusendel'}[den]+(k===1?'':'ar');
+  const {k,a,b}=q.item;
+  if(!isFr(q)){
+    const [x,op,y,v]=arith(q),eq=`${fmtDec(x)} ${op} ${fmtDec(y)} = <b>${fmtDec(v)}</b>`;
+    let how;
+    if(k==='mul'){
+      const s=Math.min(a,b),g=Math.max(a,b);
+      if(g===10)how=`Gånger 10: sätt en nolla efter ${s}`;
+      else if(s<=4)how=Array(s).fill(g).join(' + ')+` = ${v}`;
+      else if(s===5)how=`Hälften av 10 · ${g}: &nbsp;${g*10} / 2 = ${v}`;
+      else how=`5 · ${g} = ${5*g} &nbsp;och&nbsp; ${s-5} · ${g} = ${(s-5)*g} &nbsp;→&nbsp; ${5*g} + ${(s-5)*g} = ${v}`;
+    }else if(a%1||b%1){
+      const t=z=>Math.round(z*10);
+      how=`${t(a)} tiondelar ${op} ${t(b)} tiondelar = ${t(v)} tiondelar = ${fmtDec(v)}`;
+    }else if(k==='add'){
+      const g=Math.max(a,b),s=Math.min(a,b);
+      if(g<10)how=`Fyll till 10 först: &nbsp;${g} + ${10-g} = 10, &nbsp;sedan ${s-(10-g)} till = ${v}`;
+      else how=`Tiotal: ${a-a%10} + ${b-b%10} = ${a-a%10+b-b%10}. &nbsp;Ental: ${a%10} + ${b%10} = ${a%10+b%10}. &nbsp;Tillsammans ${v}`;
+    }else{
+      if(a<20)how=`Gå ner till 10 först: &nbsp;${a} − ${a-10} = 10, &nbsp;sedan 10 − ${b-(a-10)} = ${v}`;
+      else how=`Ta tiotalen först: &nbsp;${a} − ${b-b%10} = ${a-(b-b%10)}, &nbsp;sedan ${a-(b-b%10)} − ${b%10} = ${v}`;
+    }
+    return {eq,how};
+  }
+  const n=a,d=b,s=fmtDec(n/d),F=fracH(n,d);
+  const places=s.split(',')[1].length,den=10**places,c=Math.round(n/d*den);
+  const unit={10:'tiondel',100:'hundradel',1000:'tusendel'}[den]+(c===1?'':'ar');
   let how;
-  if(q.dir==='f2d')how=d===den?`${k} ${unit} skrivs ${s}`:`Förläng med ${den/d}: &nbsp;${F} = ${fracH(k,den)} = ${s}`;
-  else how=`${s} = ${k} ${unit} = ${fracH(k,den)}`+(d===den?'':` = ${F} &nbsp;(förkorta med ${den/d})`);
-  return {eq:q.dir==='f2d'?`${F} = <b>${s}</b>`:`${s} = <b>${F}</b>`,how};
+  if(k==='f2d')how=d===den?`${c} ${unit} skrivs ${s}`:`Förläng med ${den/d}: &nbsp;${F} = ${fracH(c,den)} = ${s}`;
+  else how=`${s} = ${c} ${unit} = ${fracH(c,den)}`+(d===den?'':` = ${F} &nbsp;(förkorta med ${den/d})`);
+  return {eq:k==='f2d'?`${F} = <b>${s}</b>`:`${s} = <b>${F}</b>`,how};
 }
 
 // ---------- Sparat läge ----------
@@ -267,7 +343,7 @@ function sched(){
   }
 }
 setInterval(sched,25);
-function musicStart(li){if(!AC)return;root=[0,2,-2,3,5][li]||0;musicOn=true;stepN=0;nextT=AC.currentTime+.06;t0=nextT}
+function musicStart(li){if(!AC)return;root=[0,2,-2,3,5][li%5];musicOn=true;stepN=0;nextT=AC.currentTime+.06;t0=nextT}
 function pulse(){
   const t=AC&&musicOn&&AC.state==='running'?(AC.currentTime-t0)/SPB:performance.now()/1000/SPB;
   return Math.max(0,1-(t-Math.floor(t))*2.2);
@@ -301,16 +377,17 @@ const BG=Array.from({length:16},(_,i)=>({x:bgr()*1500,y:40+bgr()*340,z:.15+bgr()
 function setMode(m){mode=m;tMode=0;for(const id of['menu','card','win'])$(id).classList.toggle('on',id===m);$('top').style.display=m==='menu'?'none':'flex'}
 
 function rollSlot(i,keep){
-  const L=S.L,sl=S.slots[i];let fact,dir;
-  if(keep&&sl.q){fact=sl.q.fact;dir=sl.q.dir}
+  const L=S.L,sl=S.slots[i];let item;
+  if(keep&&sl.q)item=sl.q.item;
   else{
-    const prev=i>0&&S.slots[i-1].q?S.slots[i-1].q.fact:null,c=[];
-    for(const f of L.facts)for(const d of L.dirs)if(f!==prev)c.push({f,d,w:1+2*Math.min(save.miss[f.join('/')+d]||0,3)});
+    const used=S.slots.filter((s,j)=>j!==i&&s.q).map(s=>s.q.item.a+'/'+s.q.item.b);   // inte samma tal två gånger per bana
+    let c=L.items.filter(o=>!used.includes(o.a+'/'+o.b));if(!c.length)c=L.items;
+    c=c.map(o=>({o,w:1+2*Math.min(save.miss[o.a+'/'+o.b+o.k]||0,3)}));
     let r=Math.random()*c.reduce((a,o)=>a+o.w,0),ch=c[0];
     for(const o of c){r-=o.w;if(r<=0){ch=o;break}}
-    fact=ch.f;dir=ch.d;
+    item=ch.o;
   }
-  sl.q=makeQuestion(fact,dir,L.facts,Math.random);sl.picked=-1;sl.done=false;
+  sl.q=makeQuestion(item,L.items,Math.random);sl.picked=-1;sl.done=false;
 }
 function freshRun(li){S=newRun(li);for(let i=0;i<S.slots.length;i++)rollSlot(i);attX=6}
 function startLevel(li){
@@ -330,7 +407,6 @@ function burst(wx,wy,n,cols,sp){
 }
 const SLICE=i=>`hsl(${(48+i*47)%360},100%,62%)`;
 function onEvent(ev){
-  const mkey=q=>q.fact.join('/')+q.dir;
   if(ev==='jump'){sfx.jump();return}
   if(ev==='correct'){
     const sl=S.slots[S.qi-1],k=mkey(sl.q);
@@ -347,7 +423,7 @@ function onEvent(ev){
     $('stars').innerHTML=starH(st);
     $('wt').innerHTML=`${S.L.n} tårtbitar samlade · ${errors} fel svar · ${attempts} försök`+
       (st<3?'<br>Klara banan utan fel svar för tre stjärnor!':'<br>Perfekt – inga fel svar!');
-    $('bnext').style.display=S.li<LEVELS.length-1?'':'none';
+    $('bnext').style.display=LEVELS[S.li+1]&&LEVELS[S.li+1].cat===S.L.cat?'':'none';
     setMode('win');return;
   }
   // död
@@ -372,12 +448,15 @@ function toMenu(){musicOn=false;S=null;held=false;buildMenu();setMode('menu')}
 
 // ---------- Meny ----------
 function buildMenu(){
-  $('lv').innerHTML=LEVELS.map((L,i)=>{const s=save.best[i]||0;
-    return `<button data-i="${i}"><span class="n">BANA ${i+1}</span><span class="t">${L.name}</span><span class="s">${L.sub}</span><span class="st">${starH(s)}</span></button>`}).join('');
+  const cat=CATS[save.cat]?save.cat:0;let nr=0;
+  $('cats').innerHTML=CATS.map((c,i)=>`<button data-c="${i}"${i===cat?' class="on"':''}>${c}</button>`).join('');
+  $('lv').innerHTML=LEVELS.map((L,i)=>{if(L.cat!==cat)return '';const s=save.best[i]||0;
+    return `<button data-i="${i}"><span class="n">BANA ${++nr}</span><span class="t">${L.name}</span><span class="s">${L.sub}</span><span class="st">${starH(s)}</span></button>`}).join('');
   $('bcp').textContent='Kontrollpunkter: '+(save.cp?'PÅ':'AV');
   $('bsnd').textContent='Ljud: '+(save.mute?'AV':'PÅ');
 }
 $('lv').addEventListener('click',e=>{const b=e.target.closest('button');if(b)startLevel(+b.dataset.i)});
+$('cats').addEventListener('click',e=>{const b=e.target.closest('button');if(b){save.cat=+b.dataset.c;persist();buildMenu()}});
 $('bcp').onclick=()=>{save.cp=!save.cp;persist();buildMenu()};
 function toggleMute(){save.mute=!save.mute;persist();if(master)master.gain.value=save.mute?0:.55;buildMenu();$('bm').style.opacity=save.mute?.4:1}
 $('bsnd').onclick=()=>{audio();toggleMute()};
@@ -508,11 +587,10 @@ function draw(){
 function hud(){
   let sl=null;
   if(S&&(mode==='play'||mode==='ready'||mode==='dead')){const c=S.slots[S.qi];if(c&&c.q&&S.x>=c.ask)sl=c}
-  const k=sl?S.qi+sl.q.dir+sl.q.fact:'';
+  const k=sl?S.qi+mkey(sl.q)+sl.q.sw:'';
   if(k!==shown){
     shown=k;$('q').classList.toggle('on',!!sl);
-    if(sl){const [n,d]=sl.q.fact;
-      $('qt').innerHTML=sl.q.dir==='f2d'?`Skriv ${fracH(n,d)} i <b>decimalform</b>`:`Skriv ${fmtDec(n/d)} i <b>bråkform</b>`}
+    if(sl)$('qt').innerHTML=promptH(sl.q);
   }
   $('bar').style.display=S?'':'none';
   if(S)$('pf').style.width=Math.min(100,S.x/S.L.finish*100)+'%';
