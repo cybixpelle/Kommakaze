@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Kommakaze</title>
+<style>
+  html,body{margin:0;height:100%;background:#07051a;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+  #stage{position:absolute;left:50%;top:50%;width:960px;height:540px;transform-origin:center;overflow:hidden;
+    font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif;color:#fff}
+  canvas{position:absolute;inset:0;width:960px;height:540px;display:block}
+  .fr{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;line-height:1.05;margin:0 .18em}
+  .fr i{font-style:normal;padding:0 .22em}
+  .fr i:first-child{border-bottom:.09em solid currentColor}
+  #bar{position:absolute;left:0;top:0;width:100%;height:6px;background:rgba(0,0,0,.35)}
+  #pf{height:100%;width:0;background:linear-gradient(90deg,#ffd84a,#ff5fa2)}
+  #q{position:absolute;left:50%;top:14px;transform:translate(-50%,-140%);transition:transform .25s cubic-bezier(.2,1.4,.4,1);
+    background:rgba(8,6,30,.88);border:3px solid #5ff;border-radius:16px;padding:6px 26px 7px;text-align:center;white-space:nowrap;
+    box-shadow:0 0 24px rgba(80,255,255,.45)}
+  #q.on{transform:translate(-50%,0)}
+  #qt{font-size:30px;font-weight:900}
+  #qt b{color:#ffd84a}
+  #qs{font-size:13px;opacity:.75;letter-spacing:.04em;margin-top:1px}
+  #top{position:absolute;right:10px;top:14px;display:flex;gap:8px}
+  #top button{width:40px;height:40px;font-size:18px;padding:0}
+  button{font:inherit;font-weight:900;color:#fff;background:rgba(10,8,40,.8);border:3px solid #fff;border-radius:12px;
+    padding:10px 18px;cursor:pointer}
+  button:hover{background:#fff;color:#14104a}
+  .ov{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+    background:rgba(6,4,26,.72)}
+  .ov.on{display:flex}
+  h1{font-size:76px;margin:0;font-style:italic;font-weight:900;letter-spacing:.02em;
+    background:linear-gradient(180deg,#fff 20%,#ffd84a 55%,#ff5fa2);-webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 5px 0 rgba(0,0,0,.45))}
+  .tag{font-size:18px;opacity:.85;margin:2px 0 20px}
+  #lv{display:flex;gap:12px}
+  #lv button{width:168px;padding:12px 6px 10px;display:flex;flex-direction:column;align-items:center;gap:3px}
+  #lv .n{font-size:13px;opacity:.7}
+  #lv .t{font-size:18px}
+  #lv .s{font-size:12px;font-weight:400;opacity:.8}
+  #lv .st{font-size:20px;color:#ffd84a;letter-spacing:.1em}
+  .row{display:flex;gap:12px;margin-top:20px}
+  .row button{font-size:15px}
+  .help{margin-top:20px;font-size:16px;line-height:1.6;opacity:.9}
+  .help kbd{border:2px solid #fff;border-radius:6px;padding:0 8px;font:inherit;font-weight:900}
+  #card h2,#win h2{font-size:40px;margin:0 0 6px;font-style:italic}
+  #card .sub{font-size:20px;opacity:.9;min-height:44px}
+  #eq{font-size:60px;font-weight:900;margin:12px 0;padding:10px 40px;border-radius:20px;background:rgba(8,6,30,.9);border:3px solid #5f6}
+  #eq b{color:#5f6}
+  #how{font-size:24px;min-height:50px}
+  #tap{margin-top:24px;font-size:18px;opacity:0;transition:opacity .3s}
+  #tap.on{opacity:.9}
+  #stars{font-size:80px;color:#ffd84a;letter-spacing:.08em;text-shadow:0 0 30px rgba(255,216,74,.6)}
+  #wt{font-size:20px;line-height:1.6}
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="c"></canvas>
+  <div id="bar"><div id="pf"></div></div>
+  <div id="q"><div id="qt"></div><div id="qs">RULLA IN I RÄTT SVAR · HOPPA ÖVER FEL SVAR</div></div>
+  <div id="top"><button id="bm" title="Ljud (M)">♪</button><button id="bx" title="Meny (Esc)">☰</button></div>
+
+  <div id="menu" class="ov on">
+    <h1>KOMMAKAZE</h1>
+    <div class="tag">Rulla, hoppa och fyll tårtan – bråk och decimaltal i full fart!</div>
+    <div id="lv"></div>
+    <div class="row"><button id="bcp"></button><button id="bsnd"></button></div>
+    <div class="help"><kbd>Mellanslag</kbd> eller klick/tryck = hoppa (håll in för att fortsätta hoppa)<br>
+      Rulla <b>in i</b> kristallen med rätt svar. Hoppa <b>över</b> de som är fel.</div>
+  </div>
+
+  <div id="card" class="ov">
+    <h2 id="ch"></h2>
+    <div class="sub" id="cs"></div>
+    <div id="eq"></div>
+    <div id="how"></div>
+    <div id="tap">Tryck för att försöka igen</div>
+  </div>
+
+  <div id="win" class="ov">
+    <h2>BANAN KLAR!</h2>
+    <div id="stars"></div>
+    <div id="wt"></div>
+    <div class="row"><button id="bnext">Nästa bana ▶</button><button id="bagain">Spela igen</button><button id="bmenu">Meny</button></div>
+  </div>
+</div>
+
+<script>
+//CORE-START  (ren spellogik utan DOM – testas även i Node)
+const G=79.4, JUMP=18.26, DT=1/120;
+const fmtDec=v=>String(Math.round(v*1000)/1000).replace('.',',');
+function rng(seed){return()=>{seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+const T10=[[1,10],[3,10],[7,10],[9,10]], HALF=[[1,2],[1,4],[3,4]], FIFTH=[[1,5],[2,5],[3,5],[4,5]],
+  HUND=[[1,100],[3,100],[7,100],[9,100],[23,100],[41,100],[1,20],[1,25],[1,50]],
+  EIGHT=[[1,8],[3,8],[5,8],[7,8],[3,20],[9,20]];
+const P1=['spike','spike','block','spike2'], P2=['spike','spike2','block','blockSpikes','hops'], P3=[...P2,'stairs','islands'];
+const LEVELS=[
+  {name:'Halvor & tiondelar',sub:'Bråk → decimal',speed:7.5,hue:255,dirs:['f2d'],facts:[...HALF,...T10],n:6,per:2,pool:P1},
+  {name:'Tvärtom!',sub:'Decimal → bråk',speed:8,hue:190,dirs:['d2f'],facts:[...HALF,...T10],n:6,per:2,pool:P2},
+  {name:'Femtedelar',sub:'Åt båda hållen',speed:8.5,hue:320,dirs:['f2d','d2f'],facts:[...FIFTH,...HALF,[3,10],[7,10]],n:7,per:3,pool:P3},
+  {name:'Hundradelar',sub:'Små tal, hög fart',speed:9,hue:140,dirs:['f2d','d2f'],facts:[...HUND,[1,4],[3,4]],n:7,per:3,pool:P3},
+  {name:'Mästarbanan',sub:'Allt blandat',speed:10,hue:15,dirs:['f2d','d2f'],facts:[...HALF,...T10,...FIFTH,...HUND,...EIGHT],n:8,per:3,pool:P3},
+];
+
+// Hinderbitar. Varje funktion lägger ut hinder från x och returnerar var biten slutar.
+const CH={
+  spike:(L,x)=>{L.spikes.push(x);return x+1},
+  spike2:(L,x)=>{L.spikes.push(x,x+1);return x+2},
+  block:(L,x)=>{L.solids.push({x,y:0,w:1,h:1});return x+1},
+  blockSpikes:(L,x)=>{L.solids.push({x,y:0,w:3,h:1});L.spikes.push(x+3,x+4);return x+5},
+  hops:(L,x)=>{L.spikes.push(x,x+6,x+12);return x+13},
+  stairs:(L,x)=>{L.solids.push({x,y:0,w:6,h:1},{x:x+6,y:0,w:6,h:2});return x+12},
+  islands:(L,x)=>{L.solids.push({x,y:0,w:5,h:1});L.spikes.push(x+5,x+6);L.solids.push({x:x+7,y:0,w:5,h:1});return x+12},
+};
+
+function buildLevel(li){
+  const C=LEVELS[li],r=rng(li*97+5),L={...C,li,solids:[],spikes:[],slots:[]};
+  const gap=Math.round(C.speed*.8),gg=Math.round(C.speed*.9);
+  let x=16,prevEnd=0,last='';
+  for(let q=0;q<C.n;q++){
+    for(let i=0;i<C.per;i++){
+      let t;do{t=C.pool[Math.floor(r()*C.pool.length)]}while(t===last);
+      last=t;x=CH[t](L,x)+gap;
+    }
+    x+=4;
+    L.slots.push({ask:Math.max(prevEnd,x-C.speed*3.5),gates:[x,x+gg,x+2*gg]});
+    prevEnd=x+2*gg+2;x+=2*gg+10;
+  }
+  L.finish=x+4;
+  return L;
+}
+
+// Bygger en fråga med två felaktiga svar som bygger på vanliga missuppfattningar.
+function makeQuestion(fact,dir,facts,rnd){
+  const [n,d]=fact,v=n/d,s=fmtDec(v);
+  const key=o=>o.t==='d'?o.s:o.n+'/'+o.d;
+  const same=o=>o.t==='d'?o.s===s:o.n*d===o.d*n;
+  const sh=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+  let mis,oth,right;
+  if(dir==='f2d'){
+    right={t:'d',s};
+    mis=[parseFloat('0.'+n+d),parseFloat('0.'+d),parseFloat(n+'.'+d),v*10,v/10]
+      .filter(x=>x>0&&Math.abs(x*1000-Math.round(x*1000))<1e-6).map(x=>({t:'d',s:fmtDec(x)}));
+    oth=facts.map(f=>({t:'d',s:fmtDec(f[0]/f[1])}));
+  }else{
+    right={t:'f',n,d};
+    const ds=s.split(',')[1],p=ds.length,k=parseInt(ds,10);
+    mis=[[k,p===1?100:10**(p-1)]];
+    if(k>1)mis.push([1,k]);
+    if(n>1)mis.push([d,n]);
+    if(p===2&&ds[0]!=='0'&&ds[1]!=='0')mis.push([+ds[0],+ds[1]]);
+    mis=mis.map(([a,b])=>({t:'f',n:a,d:b}));
+    oth=facts.map(f=>({t:'f',n:f[0],d:f[1]}));
+  }
+  const seen=new Set([key(right)]);
+  const take=list=>{for(const o of sh(list.slice()))if(!same(o)&&!seen.has(key(o))){seen.add(key(o));return o}};
+  const a=take(mis)||take(oth);
+  const b=(rnd()<.5&&take(mis))||take(oth)||take(mis);
+  const opts=sh([right,a,b]);
+  return {fact,dir,opts,correct:opts.indexOf(right)};
+}
+
+function newRun(li){
+  const L=buildLevel(li);
+  return {li,L,x:0,y:0,vy:0,ground:true,qi:0,cp:null,slots:L.slots.map(s=>({...s,q:null,done:false,picked:-1}))};
+}
+
+// Ett fysiksteg. Returnerar null | 'jump' | 'crash' | 'correct' | 'wrong' | 'missed' | 'win'
+function step(S,held){
+  const L=S.L,py0=S.y;let ev=null;
+  if(held&&S.ground){S.vy=JUMP;S.ground=false;ev='jump'}
+  S.x+=L.speed*DT;S.vy-=G*DT;S.y+=S.vy*DT;
+  let gr=false;
+  if(S.y<=0){S.y=0;S.vy=0;gr=true}
+  for(const b of L.solids){
+    if(b.x>S.x+1)break;
+    if(S.x+1>b.x+.02&&S.x<b.x+b.w-.02){
+      const top=b.y+b.h;
+      if(S.y<top&&S.y+1>b.y){
+        if(py0>=top-.25||S.y>=top-.25){if(S.vy<=0){S.y=top;S.vy=0;gr=true}}
+        else return 'crash';
+      }
+    }
+  }
+  for(const s of L.spikes){
+    if(s>S.x+1)break;
+    if(S.x+.9>s+.35&&S.x+.1<s+.65&&S.y<.5)return 'crash';
+  }
+  S.ground=gr;
+  const sl=S.slots[S.qi];
+  if(sl&&sl.q){
+    const c=sl.q.correct;
+    for(let i=0;i<3;i++){
+      const gx=sl.gates[i];
+      if(S.x+.9>gx+.15&&S.x+.1<gx+.85&&S.y<.85){
+        sl.picked=i;
+        if(i===c){sl.done=true;S.qi++;return 'correct'}
+        return 'wrong';
+      }
+    }
+    if(S.x>sl.gates[c]+1.2){sl.picked=-1;return 'missed'}
+  }
+  if(S.x>=L.finish)return 'win';
+  return ev;
+}
+//CORE-END
+
+// ---------- Hjälp för visning ----------
+const $=id=>document.getElementById(id);
+const fracH=(n,d)=>`<span class="fr"><i>${n}</i><i>${d}</i></span>`;
+const starH=s=>'★'.repeat(s)+'<span style="opacity:.22;color:#fff">'+'★'.repeat(3-s)+'</span>';
+const optH=o=>o.t==='d'?o.s:fracH(o.n,o.d);
+function explain(q){
+  const [n,d]=q.fact,s=fmtDec(n/d),F=fracH(n,d);
+  const places=s.split(',')[1].length,den=10**places,k=Math.round(n/d*den);
+  const unit={10:'tiondel',100:'hundradel',1000:'tusendel'}[den]+(k===1?'':'ar');
+  let how;
+  if(q.dir==='f2d')how=d===den?`${k} ${unit} skrivs ${s}`:`Förläng med ${den/d}: &nbsp;${F} = ${fracH(k,den)} = ${s}`;
+  else how=`${s} = ${k} ${unit} = ${fracH(k,den)}`+(d===den?'':` = ${F} &nbsp;(förkorta med ${den/d})`);
+  return {eq:q.dir==='f2d'?`${F} = <b>${s}</b>`:`${s} = <b>${F}</b>`,how};
+}
+
+// ---------- Sparat läge ----------
+let save={best:{},miss:{},cp:true,mute:false};
+try{Object.assign(save,JSON.parse(localStorage.getItem('brakruset')||'{}'))}catch(e){}
+const persist=()=>{try{localStorage.setItem('brakruset',JSON.stringify(save))}catch(e){}};
+
+// ---------- Ljud ----------
+let AC=null,master,bassF,noiseBuf,nextT=0,stepN=0,musicOn=false,t0=0,root=0;
+const SPB=60/132,STEP=SPB/4;
+function audio(){
+  if(AC){AC.resume&&AC.resume();return}
+  try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){AC=null;return}
+  master=AC.createGain();master.gain.value=save.mute?0:.55;master.connect(AC.destination);
+  bassF=AC.createBiquadFilter();bassF.type='lowpass';bassF.frequency.value=700;bassF.connect(master);
+  noiseBuf=AC.createBuffer(1,AC.sampleRate*.4,AC.sampleRate);
+  const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+}
+function osc(type,f,t,dur,vol,f2,dst){
+  if(!AC)return;
+  const o=AC.createOscillator(),g=AC.createGain();o.type=type;o.frequency.setValueAtTime(f,t);
+  if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+dur);
+  g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.001,t+dur);
+  o.connect(g);g.connect(dst||master);o.start(t);o.stop(t+dur+.02);
+}
+function noise(t,dur,vol,hp){
+  if(!AC)return;
+  const s=AC.createBufferSource(),g=AC.createGain(),f=AC.createBiquadFilter();
+  s.buffer=noiseBuf;f.type='highpass';f.frequency.value=hp;
+  g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.001,t+dur);
+  s.connect(f);f.connect(g);g.connect(master);s.start(t);s.stop(t+dur+.02);
+}
+const hz=n=>110*2**(n/12);
+const PROG=[{r:0,m:3},{r:0,m:3},{r:-4,m:4},{r:-2,m:4}];
+function sched(){
+  if(!AC||!musicOn)return;
+  while(nextT<AC.currentTime+.12){
+    const s=stepN%16,bar=(stepN>>4)%4,c=PROG[bar],t=nextT;
+    if(s%4===0)osc('sine',150,t,.16,.9,40);
+    if(s%8===4)noise(t,.12,.3,1500);
+    if(s%2===0)noise(t,.03,s%4===2?.16:.06,7000);
+    if(s%4!==0)osc('sawtooth',hz(root+c.r-12),t,STEP*.9,.3,0,bassF);
+    if(bar%2||s<12)osc('square',hz(root+c.r+12+[0,c.m,7,12,7,c.m,12,7][s%8]),t,STEP*.8,.045);
+    nextT+=STEP;stepN++;
+  }
+}
+setInterval(sched,25);
+function musicStart(li){if(!AC)return;root=[0,2,-2,3,5][li]||0;musicOn=true;stepN=0;nextT=AC.currentTime+.06;t0=nextT}
+function pulse(){
+  const t=AC&&musicOn&&AC.state==='running'?(AC.currentTime-t0)/SPB:performance.now()/1000/SPB;
+  return Math.max(0,1-(t-Math.floor(t))*2.2);
+}
+const now=()=>AC?AC.currentTime:0;
+const sfx={
+  jump(){osc('square',330,now(),.07,.04,620)},
+  correct(){const t=now();osc('triangle',660,t,.14,.35);osc('triangle',990,t+.09,.3,.35)},
+  wrong(){osc('sawtooth',220,now(),.45,.3,60)},
+  crash(){const t=now();noise(t,.3,.45,300);osc('square',160,t,.25,.2,45)},
+  win(){const t=now();[0,4,7,12,16].forEach((n,i)=>osc('triangle',hz(24+n),t+i*.1,.35,.3))},
+};
+
+// ---------- Spelets tillstånd ----------
+const cv=$('c'),ctx=cv.getContext('2d'),stage=$('stage');
+const W=960,H=540,B=44,GY=430,PX=5,FONT='"Trebuchet MS","Segoe UI",sans-serif';
+let K=1,mode='menu',S=null,held=false,attempts=1,errors=0,tMode=0,time=0,acc=0,shake=0,flash=0,flashCol='#fff';
+let parts=[],reveal=false,pendingCard=null,shown='',attX=6,frozen=false;
+
+function fit(){
+  const s=Math.min(innerWidth/W,innerHeight/H);
+  stage.style.transform=`translate(-50%,-50%) scale(${s})`;
+  K=Math.min(3,Math.max(1,s*(window.devicePixelRatio||1)));
+  cv.width=W*K;cv.height=H*K;
+}
+addEventListener('resize',fit);fit();
+
+const bgr=rng(42),GLY=['½','¼','¾','0,5','0,25','0,1','0,75','÷','⅕','0,2','⅒','='];
+const BG=Array.from({length:16},(_,i)=>({x:bgr()*1500,y:40+bgr()*340,z:.15+bgr()*.5,s:50+bgr()*110,r:(bgr()-.5)*.6,t:GLY[i%GLY.length]}));
+
+function setMode(m){mode=m;tMode=0;for(const id of['menu','card','win'])$(id).classList.toggle('on',id===m);$('top').style.display=m==='menu'?'none':'flex'}
+
+function rollSlot(i,keep){
+  const L=S.L,sl=S.slots[i];let fact,dir;
+  if(keep&&sl.q){fact=sl.q.fact;dir=sl.q.dir}
+  else{
+    const prev=i>0&&S.slots[i-1].q?S.slots[i-1].q.fact:null,c=[];
+    for(const f of L.facts)for(const d of L.dirs)if(f!==prev)c.push({f,d,w:1+2*Math.min(save.miss[f.join('/')+d]||0,3)});
+    let r=Math.random()*c.reduce((a,o)=>a+o.w,0),ch=c[0];
+    for(const o of c){r-=o.w;if(r<=0){ch=o;break}}
+    fact=ch.f;dir=ch.d;
+  }
+  sl.q=makeQuestion(fact,dir,L.facts,Math.random);sl.picked=-1;sl.done=false;
+}
+function freshRun(li){S=newRun(li);for(let i=0;i<S.slots.length;i++)rollSlot(i);attX=6}
+function startLevel(li){
+  audio();attempts=1;errors=0;parts=[];freshRun(li);musicStart(li);held=false;reveal=false;setMode('ready');
+}
+function respawn(){
+  attempts++;held=false;reveal=false;parts=[];
+  if(save.cp&&S.cp){
+    S.x=S.cp;S.y=0;S.vy=0;S.ground=true;attX=S.cp+6;
+    if(pendingCard)rollSlot(S.qi,true);   // samma tal igen, nya svarsalternativ
+  }else{const li=S.li;freshRun(li);if(!save.cp)musicStart(li)}
+  pendingCard=null;setMode('ready');
+}
+function burst(wx,wy,n,cols,sp){
+  for(let i=0;i<n;i++){const a=Math.random()*6.283,v=sp*(.3+Math.random());
+    parts.push({x:wx,y:wy,vx:Math.cos(a)*v,vy:Math.sin(a)*v+3,l:0,m:.5+Math.random()*.5,c:cols[i%cols.length],s:4+Math.random()*7})}
+}
+const SLICE=i=>`hsl(${(48+i*47)%360},100%,62%)`;
+function onEvent(ev){
+  const mkey=q=>q.fact.join('/')+q.dir;
+  if(ev==='jump'){sfx.jump();return}
+  if(ev==='correct'){
+    const sl=S.slots[S.qi-1],k=mkey(sl.q);
+    if(save.miss[k]>0){save.miss[k]--;persist()}
+    S.cp=sl.gates[2]+2;
+    sfx.correct();flash=.35;flashCol='#7f8';
+    burst(sl.gates[sl.picked]+.5,.6,26,['#7f8','#ffd84a','#fff'],9);
+    return;
+  }
+  if(ev==='win'){
+    const st=errors===0?3:errors<=2?2:1;
+    save.best[S.li]=Math.max(save.best[S.li]||0,st);persist();
+    sfx.win();
+    $('stars').innerHTML=starH(st);
+    $('wt').innerHTML=`${S.L.n} tårtbitar samlade · ${errors} fel svar · ${attempts} försök`+
+      (st<3?'<br>Klara banan utan fel svar för tre stjärnor!':'<br>Perfekt – inga fel svar!');
+    $('bnext').style.display=S.li<LEVELS.length-1?'':'none';
+    setMode('win');return;
+  }
+  // död
+  shake=1;flash=.5;flashCol=ev==='crash'?'#fff':'#f56';
+  burst(S.x+.5,S.y+.5,30,[0,1,2,3,4].map(SLICE).concat('#fff'),11);
+  if(ev==='crash'){sfx.crash();pendingCard=null}
+  else{
+    const sl=S.slots[S.qi],q=sl.q,k=mkey(q);
+    errors++;save.miss[k]=(save.miss[k]||0)+1;persist();sfx.wrong();reveal=true;
+    pendingCard={q,ev,picked:sl.picked};
+  }
+  setMode('dead');
+}
+function showCard(){
+  const {q,ev,picked}=pendingCard,e=explain(q);
+  $('ch').textContent=ev==='missed'?'Du hoppade över rätt svar!':'Hoppsan!';
+  $('cs').innerHTML=ev==='missed'?'Rulla rakt in i kristallen med rätt svar.':`Du valde ${optH(q.opts[picked])} – men det stämmer inte.`;
+  $('eq').innerHTML=e.eq;$('how').innerHTML=e.how;$('tap').classList.remove('on');
+  setMode('card');
+}
+function toMenu(){musicOn=false;S=null;held=false;buildMenu();setMode('menu')}
+
+// ---------- Meny ----------
+function buildMenu(){
+  $('lv').innerHTML=LEVELS.map((L,i)=>{const s=save.best[i]||0;
+    return `<button data-i="${i}"><span class="n">BANA ${i+1}</span><span class="t">${L.name}</span><span class="s">${L.sub}</span><span class="st">${starH(s)}</span></button>`}).join('');
+  $('bcp').textContent='Kontrollpunkter: '+(save.cp?'PÅ':'AV');
+  $('bsnd').textContent='Ljud: '+(save.mute?'AV':'PÅ');
+}
+$('lv').addEventListener('click',e=>{const b=e.target.closest('button');if(b)startLevel(+b.dataset.i)});
+$('bcp').onclick=()=>{save.cp=!save.cp;persist();buildMenu()};
+function toggleMute(){save.mute=!save.mute;persist();if(master)master.gain.value=save.mute?0:.55;buildMenu();$('bm').style.opacity=save.mute?.4:1}
+$('bsnd').onclick=()=>{audio();toggleMute()};
+$('bm').onclick=toggleMute;$('bx').onclick=toMenu;
+$('bnext').onclick=()=>startLevel(S.li+1);
+$('bagain').onclick=()=>startLevel(S.li);
+$('bmenu').onclick=toMenu;
+buildMenu();setMode('menu');$('bm').style.opacity=save.mute?.4:1;
+
+// ---------- Inmatning ----------
+function press(){
+  if(mode==='card'){if(tMode>1.2)respawn();return}
+  if(mode==='play'||mode==='ready'||mode==='dead'){audio();held=true}
+}
+addEventListener('keydown',e=>{
+  if(e.code==='Escape'&&mode!=='menu'){toMenu();return}
+  if(e.code==='KeyM'){toggleMute();return}
+  if(['Space','ArrowUp','KeyW','Enter'].includes(e.code)){e.preventDefault();if(!e.repeat)press()}
+});
+addEventListener('keyup',e=>{if(['Space','ArrowUp','KeyW','Enter'].includes(e.code))held=false});
+stage.addEventListener('pointerdown',e=>{if(e.target.closest('button'))return;e.preventDefault();press()});
+addEventListener('pointerup',()=>held=false);
+addEventListener('pointercancel',()=>held=false);
+addEventListener('blur',()=>held=false);
+addEventListener('contextmenu',e=>e.preventDefault());
+document.addEventListener('visibilitychange',()=>{if(AC)document.hidden?AC.suspend():AC.resume()});
+
+// ---------- Ritning ----------
+function drawOpt(o,cx,cy){
+  ctx.fillStyle='#fff';
+  if(o.t==='d'){ctx.font=`900 34px ${FONT}`;ctx.fillText(o.s,cx,cy+1);return}
+  ctx.font=`900 27px ${FONT}`;
+  const w=Math.max(ctx.measureText(o.n).width,ctx.measureText(o.d).width)+12;
+  ctx.fillText(o.n,cx,cy-15);ctx.fillText(o.d,cx,cy+17);ctx.fillRect(cx-w/2,cy-1.5,w,3.5);
+}
+function drawPie(cx,cy,r,rot,n,filled){
+  ctx.save();ctx.translate(cx,cy);ctx.rotate(rot);
+  ctx.shadowColor='#ffd84a';ctx.shadowBlur=18;
+  ctx.fillStyle='#120e3a';ctx.beginPath();ctx.arc(0,0,r,0,6.2832);ctx.fill();ctx.shadowBlur=0;
+  for(let i=0;i<n;i++){
+    const a0=i/n*6.2832,a1=(i+1)/n*6.2832;
+    ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,r,a0,a1);ctx.closePath();
+    if(i<filled){ctx.fillStyle=SLICE(i);ctx.fill()}
+    ctx.strokeStyle='rgba(255,255,255,.9)';ctx.lineWidth=1.6;ctx.stroke();
+  }
+  ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,r,0,6.2832);ctx.stroke();
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(0,0,3,0,6.2832);ctx.fill();
+  ctx.restore();
+}
+function draw(){
+  const L=S?S.L:LEVELS[0],hue=L.hue,p=pulse(),cam=S?S.x-PX:time*5;
+  ctx.setTransform(K,0,0,K,0,0);
+  const g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,`hsl(${hue},65%,${10+p*4}%)`);g.addColorStop(1,`hsl(${hue+45},70%,${26+p*8}%)`);
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  if(shake>0)ctx.translate((Math.random()-.5)*shake*18,(Math.random()-.5)*shake*18);
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  for(const o of BG){
+    const x=((o.x-cam*B*o.z)%1500+1500)%1500-250;
+    ctx.save();ctx.translate(x,o.y);ctx.rotate(o.r);ctx.font=`900 ${o.s}px ${FONT}`;
+    ctx.fillStyle=`hsla(${hue+60},90%,80%,${.04+o.z*.12})`;ctx.fillText(o.t,0,0);ctx.restore();
+  }
+  // mark
+  ctx.fillStyle=`hsl(${hue+20},60%,${11+p*3}%)`;ctx.fillRect(-30,GY,W+60,H-GY+30);
+  ctx.strokeStyle=`hsla(${hue+150},90%,75%,.16)`;ctx.lineWidth=2;ctx.beginPath();
+  for(let x=-(((cam*B)%(B*2))+B*2)%(B*2);x<W+B*2;x+=B*2){ctx.moveTo(x,GY);ctx.lineTo(x-40,H+20)}
+  ctx.stroke();
+  ctx.fillStyle='#fff';ctx.shadowColor=`hsl(${hue+150},100%,70%)`;ctx.shadowBlur=12+p*12;ctx.fillRect(-30,GY-2,W+60,4);ctx.shadowBlur=0;
+  if(!S)return;
+  const sx=wx=>(wx-cam)*B,edge=`hsl(${hue+150},95%,68%)`;
+
+  ctx.font=`italic 900 46px ${FONT}`;ctx.fillStyle='rgba(255,255,255,.5)';
+  ctx.fillText('Försök '+attempts,sx(attX),250);
+
+  // block
+  for(const b of L.solids){
+    const X=sx(b.x);if(X>W+10||X+b.w*B<-10)continue;
+    const Y=GY-(b.y+b.h)*B;
+    ctx.fillStyle=`hsl(${hue},55%,9%)`;ctx.fillRect(X,Y,b.w*B,b.h*B);
+    ctx.strokeStyle=`hsla(${hue+150},95%,68%,.28)`;ctx.lineWidth=2;
+    for(let i=0;i<b.w;i++)for(let j=0;j<b.h;j++)ctx.strokeRect(X+i*B+7,Y+j*B+7,B-14,B-14);
+    ctx.strokeStyle=edge;ctx.lineWidth=3;ctx.strokeRect(X+1.5,Y+1.5,b.w*B-3,b.h*B-1.5);
+  }
+  // taggar
+  ctx.lineWidth=2.5;ctx.lineJoin='round';
+  for(const s of L.spikes){
+    const X=sx(s);if(X>W+10||X<-B)continue;
+    ctx.beginPath();ctx.moveTo(X+3,GY-2);ctx.lineTo(X+B/2,GY-B+3);ctx.lineTo(X+B-3,GY-2);ctx.closePath();
+    ctx.fillStyle=`hsl(${hue},55%,9%)`;ctx.fill();ctx.strokeStyle='#fff';ctx.stroke();
+  }
+  // mål
+  const fx=sx(L.finish);
+  if(fx<W+20)for(let j=0;j<20;j++)for(let i=0;i<2;i++){ctx.fillStyle=(i+j)%2?'#fff':'#111';ctx.fillRect(fx+i*14,GY-(j+1)*14*1.55,14,14*1.55)}
+
+  // svarskristaller
+  S.slots.forEach((sl,si)=>{
+    if(!sl.q)return;
+    sl.gates.forEach((gx,i)=>{
+      const X=sx(gx)+B/2;if(X<-80||X>W+80)return;
+      if(sl.done&&sl.picked===i)return;
+      let col='#5ff';
+      if(reveal&&si===S.qi){if(i===sl.q.correct)col='#5f6';else if(i===sl.picked)col='#f56'}
+      ctx.globalAlpha=sl.done?.16:1;
+      const cy=GY-B/2,r=B*.48*(1+p*.06),sy=GY-4.45*B;
+      ctx.strokeStyle=col;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(X,cy-r);ctx.lineTo(X,sy+38);ctx.stroke();
+      ctx.shadowColor=col;ctx.shadowBlur=16;
+      ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(X,cy-r);ctx.lineTo(X+r,cy);ctx.lineTo(X,cy+r);ctx.lineTo(X-r,cy);ctx.closePath();ctx.fill();
+      ctx.shadowBlur=0;
+      ctx.fillStyle='rgba(255,255,255,.75)';ctx.beginPath();ctx.moveTo(X,cy-r+6);ctx.lineTo(X+r-9,cy);ctx.lineTo(X,cy-2);ctx.closePath();ctx.fill();
+      ctx.fillStyle='rgba(8,6,30,.92)';ctx.beginPath();ctx.roundRect(X-56,sy-38,112,76,14);ctx.fill();
+      ctx.strokeStyle=col;ctx.lineWidth=3.5;ctx.stroke();
+      drawOpt(sl.q.opts[i],X,sy);
+      ctx.globalAlpha=1;
+    });
+  });
+
+  // partiklar
+  for(const q of parts){ctx.globalAlpha=Math.max(0,1-q.l/q.m);ctx.fillStyle=q.c;ctx.fillRect(sx(q.x)-q.s/2,GY-q.y*B-q.s/2,q.s,q.s)}
+  ctx.globalAlpha=1;
+
+  // spelaren – en tårta som fylls med en bit per rätt svar
+  if(mode!=='dead'&&mode!=='card'&&!(mode==='ready'&&Math.floor(tMode*10)%2))
+    drawPie(sx(S.x)+B/2,GY-(S.y+.5)*B,B/2-1,S.x*2,L.n,S.qi);
+
+  if(flash>0){ctx.globalAlpha=flash*.6;ctx.fillStyle=flashCol;ctx.fillRect(-30,-30,W+60,H+60);ctx.globalAlpha=1}
+}
+
+function hud(){
+  let sl=null;
+  if(S&&(mode==='play'||mode==='ready'||mode==='dead')){const c=S.slots[S.qi];if(c&&c.q&&S.x>=c.ask)sl=c}
+  const k=sl?S.qi+sl.q.dir+sl.q.fact:'';
+  if(k!==shown){
+    shown=k;$('q').classList.toggle('on',!!sl);
+    if(sl){const [n,d]=sl.q.fact;
+      $('qt').innerHTML=sl.q.dir==='f2d'?`Skriv ${fracH(n,d)} i <b>decimalform</b>`:`Skriv ${fmtDec(n/d)} i <b>bråkform</b>`}
+  }
+  $('bar').style.display=S?'':'none';
+  if(S)$('pf').style.width=Math.min(100,S.x/S.L.finish*100)+'%';
+}
+
+// ---------- Huvudloop ----------
+let last=0;
+function frame(ts){
+  const dt=Math.min(.05,(ts-last)/1000||0);last=ts;tMode+=dt;time+=dt;
+  if(mode==='play'&&!frozen){
+    acc+=dt;
+    while(acc>=DT&&mode==='play'){acc-=DT;const ev=step(S,held);if(ev)onEvent(ev)}
+    if(mode==='play'&&S.ground&&Math.random()<.5)
+      parts.push({x:S.x+.1,y:S.y+.08,vx:-2-Math.random()*2,vy:1+Math.random()*2,l:0,m:.35,c:'rgba(255,255,255,.8)',s:3+Math.random()*4});
+  }else if(mode==='ready'){if(tMode>.6){acc=0;setMode('play')}}
+  else if(mode==='dead'){if(tMode>.75){pendingCard?showCard():respawn()}}
+  else if(mode==='card'){if(tMode>1.2)$('tap').classList.add('on')}
+  for(const q of parts){q.l+=dt;q.x+=q.vx*dt;q.y+=q.vy*dt;q.vy-=20*dt}
+  parts=parts.filter(q=>q.l<q.m);
+  shake=Math.max(0,shake-dt*3);flash=Math.max(0,flash-dt*1.6);
+  hud();draw();
+  requestAnimationFrame(frame);
+}
+// Felsökning: index.html#shot=bana,x fryser en bild mitt i en bana
+const dbg=location.hash.match(/shot=(\d+),(\d+)/);
+if(dbg){startLevel(+dbg[1]);S.x=+dbg[2];while(S.slots[S.qi]&&S.slots[S.qi].gates[2]<S.x)S.qi++;setMode('play');frozen=true}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
